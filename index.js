@@ -1,3 +1,4 @@
+// index.js
 import express from "express";
 import fetch from "node-fetch";
 import bodyParser from "body-parser";
@@ -8,7 +9,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const MODEL = "gpt-4o-mini"; // you can change to gpt-4o
+const MODEL = "gpt-4o-mini"; // Change if you want another model
 
 // Homepage form
 app.get("/", (req, res) => {
@@ -77,10 +78,9 @@ Number of Files: ${fileCount}
       </html>
     `);
   } catch (err) {
-    console.error("OpenAI API error:", err);
-    res.status(500).send("Something went wrong with OpenAI API.");
+    res.status(500).send("Error communicating with OpenAI API: " + err.message);
   }
 });
 
 // Export for Vercel
-export const handler = serverless(app);
+export default serverless(app);
