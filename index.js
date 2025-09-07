@@ -1,6 +1,7 @@
 import express from "express";
 import fetch from "node-fetch";
 import bodyParser from "body-parser";
+import serverless from "serverless-http";
 
 const app = express();
 app.use(bodyParser.json());
@@ -81,5 +82,4 @@ Number of Files: ${fileCount}
   }
 });
 
-// Export for Vercel instead of app.listen
-export default app;
+export const handler = serverless(app);
