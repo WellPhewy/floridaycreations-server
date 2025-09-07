@@ -9,7 +9,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const MODEL = "gpt-4o-mini"; // Change if you want another model
+const MODEL = "gpt-4o-mini"; // change to another model if you like
 
 // Homepage form
 app.get("/", (req, res) => {
