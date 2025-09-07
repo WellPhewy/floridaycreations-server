@@ -1,149 +1,82 @@
-// index.js
 import express from "express";
-import cors from "cors";
 import fetch from "node-fetch";
+import bodyParser from "body-parser";
 
 const app = express();
-app.use(express.json());
-app.use(cors({ origin: true }));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
 const PORT = process.env.PORT || 5000;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const MODEL = "gpt-4o-mini";
+const MODEL = "gpt-4o-mini"; // you can change to gpt-4o
 
-// ---------------- UI ----------------
-app.get("/", (_req, res) => {
-  res.setHeader("Content-Type", "text/html; charset=utf-8");
-  res.end(`<!doctype html>
-<html>
-<head>
-<meta charset="utf-8" />
-<title>Floriday Server</title>
-<style>
-  body { font-family: system-ui, Arial, sans-serif; max-width: 760px; margin: 40px auto; }
-  button { font-size: 18px; padding: 10px 16px; }
-  pre { background:#f5f5f5; padding:12px; white-space: pre-wrap; word-break: break-word; }
-  label { display:block; margin-top:12px; }
-  input { width:100%; padding:8px; font-size:16px; }
-</style>
-</head>
-<body>
-  <h1>Floriday Server</h1>
-  <p>Auto-pulling live GPT instructions from Google Docs.</p>
+// Homepage form
+app.get("/", (req, res) => {
+  res.send(`
+    <html>
+      <head><title>FloridayCreations Etsy Helper</title></head>
+      <body style="font-family: sans-serif; max-width: 700px; margin: 40px auto;">
+        <h1>FloridayCreations Etsy Helper</h1>
+        <form method="POST" action="/generate">
+          <label>Canva Image Link:</label><br/>
+          <input type="text" name="imageUrl" style="width:100%; padding:8px;" /><br/><br/>
 
-  <label>File name</label>
-  <input id="fileName" value="Test File" />
+          <label>File Type (PNG/SVG/etc):</label><br/>
+          <input type="text" name="fileType" /><br/><br/>
 
-  <label>File type</label>
-  <input id="fileType" value="PNG" />
+          <label>Number of Files in Download:</label><br/>
+          <input type="text" name="fileCount" /><br/><br/>
 
-  <p><button id="btn">Run Test</button></p>
-  <pre id="out"></pre>
-
-<script>
-async function run() {
-  const payload = {
-    fileName: document.getElementById('fileName').value,
-    fileType: document.getElementById('fileType').value
-  };
-  const out = document.getElementById('out');
-  out.textContent = 'Working...';
-  try {
-    const r = await fetch('/generate', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(payload)
-    });
-    const data = await r.json();
-
-    // Render clickable links if present
-    let display = JSON.stringify(data, null, 2);
-    if (data.links) {
-      display += "\\n\\nLinks:\\n";
-      if (data.links.make) display += '<a href="' + data.links.make + '" target="_blank">Make.com</a>\\n';
-      if (data.links.alura) display += '<a href="' + data.links.alura + '" target="_blank">Alura.com</a>\\n';
-      if (data.links.etsy) display += '<a href="' + data.links.etsy + '" target="_blank">Etsy.com</a>\\n';
-      if (data.links.altTags) display += '<a href="' + data.links.altTags + '" target="_blank">ALT Tags GPT</a>\\n';
-    }
-    out.innerHTML = display;
-  } catch (e) {
-    out.textContent = 'Error: ' + e.message;
-  }
-}
-document.getElementById('btn').addEventListener('click', run);
-</script>
-</body>
-</html>`);
+          <button type="submit">Generate Etsy Listing</button>
+        </form>
+      </body>
+    </html>
+  `);
 });
 
-// ---------------- Health ----------------
-app.get("/health", (_req, res) => res.json({ ok: true }));
-
-// ---------------- Helpers ----------------
-async function callOpenAI(prompt) {
-  const headers = {
-    "Content-Type": "application/json",
-    "Authorization": `Bearer ${OPENAI_API_KEY}`
-  };
-
-  const body = {
-    model: MODEL,
-    messages: [
-      { role: "system", content: prompt },
-      { role: "user", content: "Generate the JSON now." }
-    ],
-    max_completion_tokens: 800
-  };
-
-  const resp = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers,
-    body: JSON.stringify(body)
-  });
-
-  const text = await resp.text();
-  if (!resp.ok) throw new Error(text);
-
-  let data;
-  try { data = JSON.parse(text); }
-  catch { throw new Error("Bad JSON from OpenAI: " + text.slice(0, 500)); }
-
-  const raw = data?.choices?.[0]?.message?.content || "";
-  let content;
-  try { content = JSON.parse(raw); }
-  catch { throw new Error("Assistant JSON parse failed: " + raw); }
-
-  return content;
-}
-
-// ---------------- Generate ----------------
+// Generate Etsy listing
 app.post("/generate", async (req, res) => {
-  try {
-    const { fileName = "", fileType = "" } = req.body || {};
+  const { imageUrl, fileType, fileCount } = req.body;
 
-    const prompt = `
-Return ONLY strict JSON with fields:
-title
-description
-tagsCsv
-links
+  const prompt = `
+You are Etsy Description Creator. Based on the product image link, file type, and file count provided, generate:
 
-Rules:
-- Title must include ${fileName} (${fileType}) and be under 140 chars.
-- Description must follow Etsy best practices, brand voice, and end with "©FloridayCreations aka Laura".
-- Generate 13 tags under 20 chars, no duplicates, no plurals.
-- Always include "links" with:
-  make: "https://us2.make.com/386900/scenarios/1180269"
-  alura: "https://app.alura.io/optimization/listings"
-  etsy: "https://www.etsy.com/your/shops/me/tools/listings"
-  altTags: "https://chatgpt.com/g/g-p-679c41a9c14481919ab70670c632fd7f-etsy-alt-text-for-images/project"
+1. **Etsy Title** (max 140 characters, optimized, no redundancy).
+2. **Etsy Description** (SEO-optimized, engaging, formatted with Laura’s rules).
+3. **13 Etsy SEO Tags** (comma-separated, under 20 chars, no repeats, optimized).
+
+Image: ${imageUrl}
+File Type: ${fileType}
+Number of Files: ${fileCount}
 `;
 
-    const json = await callOpenAI(prompt);
-    res.json(json);
-  } catch (e) {
-    res.status(500).json({ error: e.message || e });
-  }
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+
+  const data = await response.json();
+  const output = data.choices?.[0]?.message?.content || "Error generating output";
+
+  res.send(`
+    <html>
+      <body style="font-family: sans-serif; max-width: 700px; margin: 40px auto;">
+        <h2>Generated Etsy Listing</h2>
+        <pre style="white-space: pre-wrap;">${output}</pre>
+        <br/>
+        <a href="/">⬅ Back</a>
+      </body>
+    </html>
+  `);
 });
 
-app.listen(PORT, () => console.log(`Server on ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
