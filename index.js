@@ -1,4 +1,3 @@
-// index.js
 import express from "express";
 import fetch from "node-fetch";
 import bodyParser from "body-parser";
@@ -9,16 +8,16 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const MODEL = "gpt-4o-mini"; // change to another model if you like
+const MODEL = "gpt-4o-mini"; // you can change this later
 
-// Homepage form
+// Homepage
 app.get("/", (req, res) => {
   res.send(`
     <html>
       <head><title>FloridayCreations Etsy Helper</title></head>
       <body style="font-family: sans-serif; max-width: 700px; margin: 40px auto;">
         <h1>FloridayCreations Etsy Helper</h1>
-        <form method="POST" action="/generate">
+        <form method="POST" action="/api/generate">
           <label>Canva Image Link:</label><br/>
           <input type="text" name="imageUrl" style="width:100%; padding:8px;" /><br/><br/>
 
@@ -35,16 +34,16 @@ app.get("/", (req, res) => {
   `);
 });
 
-// Generate Etsy listing
-app.post("/generate", async (req, res) => {
+// API route
+app.post("/api/generate", async (req, res) => {
   const { imageUrl, fileType, fileCount } = req.body;
 
   const prompt = `
 You are Etsy Description Creator. Based on the product image link, file type, and file count provided, generate:
 
-1. **Etsy Title** (max 140 characters, optimized, no redundancy).
-2. **Etsy Description** (SEO-optimized, engaging, formatted with Laura’s rules).
-3. **13 Etsy SEO Tags** (comma-separated, under 20 chars, no repeats, optimized).
+1. Etsy Title (max 140 characters, optimized, no redundancy).
+2. Etsy Description (SEO-optimized, engaging, formatted with Laura’s rules).
+3. 13 Etsy SEO Tags (comma-separated, under 20 chars, no repeats, optimized).
 
 Image: ${imageUrl}
 File Type: ${fileType}
