@@ -1,23 +1,23 @@
 import express from "express";
 import fetch from "node-fetch";
 import bodyParser from "body-parser";
+import serverless from "serverless-http";
 
 const app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-const PORT = process.env.PORT || 5000;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const MODEL = "gpt-4o-mini"; // you can change to gpt-4o
+const MODEL = "gpt-4o-mini";
 
-// Homepage form
+// Homepage
 app.get("/", (req, res) => {
   res.send(`
     <html>
       <head><title>FloridayCreations Etsy Helper</title></head>
-      <body style="font-family: sans-serif; max-width: 800px; margin: 40px auto; line-height:1.5;">
+      <body style="font-family: sans-serif; max-width: 700px; margin: 40px auto;">
         <h1>FloridayCreations Etsy Helper</h1>
-        <form method="POST" action="/generate">
+        <form method="POST" action="/api/generate">
           <label>Canva Image Link:</label><br/>
           <input type="text" name="imageUrl" style="width:100%; padding:8px;" /><br/><br/>
 
@@ -27,7 +27,7 @@ app.get("/", (req, res) => {
           <label>Number of Files in Download:</label><br/>
           <input type="text" name="fileCount" /><br/><br/>
 
-          <button type="submit" style="padding:10px 16px; font-size:16px;">Generate Etsy Listing</button>
+          <button type="submit">Generate Etsy Listing</button>
         </form>
       </body>
     </html>
@@ -35,15 +35,15 @@ app.get("/", (req, res) => {
 });
 
 // Generate Etsy listing
-app.post("/generate", async (req, res) => {
+app.post("/api/generate", async (req, res) => {
   const { imageUrl, fileType, fileCount } = req.body;
 
   const prompt = `
 You are Etsy Description Creator. Based on the product image link, file type, and file count provided, generate:
 
-1. Etsy Title (max 140 characters, optimized, no redundancy).
-2. Etsy Description (SEO-optimized, engaging, following Laura’s brand voice, ending with "©FloridayCreations aka Laura").
-3. 13 Etsy SEO Tags (comma-separated, under 20 chars, no repeats, optimized).
+1. **Etsy Title** (max 140 characters, optimized, no redundancy).
+2. **Etsy Description** (SEO-optimized, engaging, formatted with Laura’s rules).
+3. **13 Etsy SEO Tags** (comma-separated, under 20 chars, no repeats, optimized).
 
 Image: ${imageUrl}
 File Type: ${fileType}
@@ -66,45 +66,21 @@ Number of Files: ${fileCount}
     const data = await response.json();
     const output = data.choices?.[0]?.message?.content || "Error generating output";
 
-    // Try to parse JSON if the model sends JSON, otherwise just print
-    let title = "";
-    let description = "";
-    let tags = "";
-    try {
-      const parsed = JSON.parse(output);
-      title = parsed.title || "";
-      description = parsed.description || "";
-      tags = parsed.tagsCsv || "";
-    } catch {
-      // fallback to raw text
-      description = output;
-    }
-
     res.send(`
       <html>
-        <body style="font-family: sans-serif; max-width: 800px; margin: 40px auto; line-height:1.5;">
+        <body style="font-family: sans-serif; max-width: 700px; margin: 40px auto;">
           <h2>Generated Etsy Listing</h2>
-          ${title ? `<h3>Title</h3><p>${title}</p>` : ""}
-          ${description ? `<h3>Description</h3><pre style="white-space: pre-wrap;">${description}</pre>` : ""}
-          ${tags ? `<h3>Tags</h3><p>${tags}</p>` : ""}
+          <pre style="white-space: pre-wrap;">${output}</pre>
           <br/>
           <a href="/">⬅ Back</a>
         </body>
       </html>
     `);
-  } catch (e) {
-    res.send(`
-      <html>
-        <body>
-          <h2>Error</h2>
-          <pre>${e.message}</pre>
-          <a href="/">⬅ Back</a>
-        </body>
-      </html>
-    `);
+  } catch (err) {
+    res.status(500).send("Error calling OpenAI API: " + err.message);
   }
 });
 
-app.listen(PORT, () => {
-  console.log(\`Server running on port \${PORT}\`);
-});
+// export for vercel
+export default app;
+export const handler = serverless(app);
