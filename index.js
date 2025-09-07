@@ -8,16 +8,16 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const MODEL = "gpt-4o-mini";
+const MODEL = "gpt-4o-mini"; // you can change to gpt-4o
 
-// Homepage
+// Homepage form
 app.get("/", (req, res) => {
   res.send(`
     <html>
       <head><title>FloridayCreations Etsy Helper</title></head>
       <body style="font-family: sans-serif; max-width: 700px; margin: 40px auto;">
         <h1>FloridayCreations Etsy Helper</h1>
-        <form method="POST" action="/api/generate">
+        <form method="POST" action="/generate">
           <label>Canva Image Link:</label><br/>
           <input type="text" name="imageUrl" style="width:100%; padding:8px;" /><br/><br/>
 
@@ -35,7 +35,7 @@ app.get("/", (req, res) => {
 });
 
 // Generate Etsy listing
-app.post("/api/generate", async (req, res) => {
+app.post("/generate", async (req, res) => {
   const { imageUrl, fileType, fileCount } = req.body;
 
   const prompt = `
@@ -77,10 +77,10 @@ Number of Files: ${fileCount}
       </html>
     `);
   } catch (err) {
-    res.status(500).send("Error calling OpenAI API: " + err.message);
+    console.error("OpenAI API error:", err);
+    res.status(500).send("Something went wrong with OpenAI API.");
   }
 });
 
-// export for vercel
-export default app;
+// Export for Vercel
 export const handler = serverless(app);
